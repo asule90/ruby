@@ -1,0 +1,1738 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>DinoLand Naya - Petualangan Dinosaurus 3D</title>
+  <meta name="description" content="Website 3D interaktif dunia dinosaurus spesial untuk Naya!">
+  
+  <!-- Google Fonts: Fredoka & Baloo 2 for cheerful kid-friendly typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;600;700&family=Baloo+2:wght@600;800&display=swap" rel="stylesheet">
+  
+  <!-- Three.js + OrbitControls + GSAP + Canvas Confetti -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root {
+      --primary: #FF6B6B;
+      --primary-light: #FFA8A8;
+      --secondary: #4ECDC4;
+      --yellow: #FFE66D;
+      --green: #7BC043;
+      --purple: #9B5DE5;
+      --bg-glass: rgba(255, 255, 255, 0.88);
+      --shadow-fun: 0 10px 25px rgba(0, 0, 0, 0.15), 0 4px 0 rgba(0, 0, 0, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      font-family: 'Fredoka', 'Baloo 2', cursive, sans-serif;
+      background: #7bdff2;
+      color: #2d3436;
+    }
+
+    #webgl-container {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+    }
+
+    /* UI Overlay */
+    .ui-layer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+      pointer-events: none;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      padding: 16px;
+    }
+
+    .interactive {
+      pointer-events: auto;
+    }
+
+    /* Header Bar */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .brand-card {
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 3px solid #FFF;
+      border-radius: 24px;
+      padding: 10px 20px;
+      box-shadow: var(--shadow-fun);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      animation: floatBadge 4s ease-in-out infinite;
+    }
+
+    @keyframes floatBadge {
+      0%, 100% { transform: translateY(0); }
+      50% { transform: translateY(-5px); }
+    }
+
+    .brand-icon {
+      font-size: 2.4rem;
+      line-height: 1;
+      filter: drop-shadow(0 4px 6px rgba(0,0,0,0.15));
+    }
+
+    .brand-titles h1 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.6rem;
+      font-weight: 800;
+      color: #FF5252;
+      line-height: 1.1;
+      letter-spacing: -0.5px;
+      text-shadow: 2px 2px 0 #FFF, 3px 3px 0 rgba(0,0,0,0.05);
+    }
+
+    .brand-titles p {
+      font-size: 0.9rem;
+      font-weight: 600;
+      color: #00b894;
+    }
+
+    .top-controls {
+      display: flex;
+      gap: 8px;
+    }
+
+    .btn-circle {
+      width: 48px;
+      height: 48px;
+      border-radius: 50%;
+      border: 3px solid #FFF;
+      background: var(--bg-glass);
+      backdrop-filter: blur(8px);
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      box-shadow: var(--shadow-fun);
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .btn-circle:hover {
+      transform: scale(1.1) translateY(-2px);
+      background: #FFF;
+    }
+
+    .btn-circle:active {
+      transform: scale(0.92);
+    }
+
+    /* Central Speech Bubble / Dino Info Card */
+    .speech-bubble {
+      position: absolute;
+      top: 90px;
+      left: 50%;
+      transform: translateX(-50%) scale(0.9);
+      background: #FFF;
+      border: 4px solid var(--yellow);
+      border-radius: 24px;
+      padding: 12px 22px;
+      box-shadow: var(--shadow-fun);
+      max-width: 90%;
+      width: 440px;
+      text-align: center;
+      opacity: 0;
+      visibility: hidden;
+      transition: all 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 20;
+    }
+
+    .speech-bubble.active {
+      opacity: 1;
+      visibility: visible;
+      transform: translateX(-50%) scale(1);
+    }
+
+    .speech-bubble h3 {
+      font-family: 'Baloo 2', cursive;
+      font-size: 1.3rem;
+      font-weight: 800;
+      color: #e17055;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+
+    .speech-bubble p {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #4b6584;
+      margin-top: 4px;
+      line-height: 1.35;
+    }
+
+    /* Bottom Control Center */
+    .bottom-bar {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    /* Action Buttons */
+    .action-row {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .action-btn {
+      background: #FFF;
+      border: 3px solid #FFF;
+      border-radius: 99px;
+      padding: 10px 18px;
+      font-family: 'Fredoka', cursive;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      box-shadow: var(--shadow-fun);
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .action-btn.roar {
+      background: linear-gradient(135deg, #FF6B6B, #FF8E53);
+      color: #FFF;
+    }
+    .action-btn.feed {
+      background: linear-gradient(135deg, #2ecc71, #27ae60);
+      color: #FFF;
+    }
+    .action-btn.disco {
+      background: linear-gradient(135deg, #9b59b6, #8e44ad);
+      color: #FFF;
+    }
+    .action-btn.camera {
+      background: linear-gradient(135deg, #3498db, #2980b9);
+      color: #FFF;
+    }
+
+    .action-btn:hover {
+      transform: translateY(-3px) scale(1.05);
+      filter: brightness(1.05);
+    }
+
+    .action-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Dino Selector Carousel */
+    .dino-selector {
+      background: var(--bg-glass);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 3px solid #FFF;
+      border-radius: 99px;
+      padding: 6px 10px;
+      box-shadow: var(--shadow-fun);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      max-width: 100%;
+      overflow-x: auto;
+      scrollbar-width: none;
+    }
+
+    .dino-selector::-webkit-scrollbar {
+      display: none;
+    }
+
+    .dino-pill {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 14px;
+      border-radius: 99px;
+      background: transparent;
+      border: 2px solid transparent;
+      font-family: 'Fredoka', cursive;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: #2d3436;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    .dino-pill.active {
+      background: #FFF;
+      color: #FF5252;
+      border-color: #FF5252;
+      box-shadow: 0 4px 12px rgba(255, 82, 82, 0.25);
+      transform: scale(1.06);
+    }
+
+    .dino-pill:hover:not(.active) {
+      background: rgba(255, 255, 255, 0.6);
+    }
+
+    /* Floating Tap Hint */
+    .tap-hint {
+      position: absolute;
+      bottom: 120px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0, 0, 0, 0.5);
+      color: #FFF;
+      padding: 6px 16px;
+      border-radius: 99px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      letter-spacing: 0.5px;
+      pointer-events: none;
+      animation: pulseHint 2s infinite ease-in-out;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    @keyframes pulseHint {
+      0%, 100% { opacity: 0.4; transform: translateX(-50%) translateY(0); }
+      50% { opacity: 0.9; transform: translateX(-50%) translateY(-5px); }
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 600px) {
+      .brand-titles h1 { font-size: 1.25rem; }
+      .brand-titles p { font-size: 0.78rem; }
+      .brand-icon { font-size: 1.8rem; }
+      .brand-card { padding: 8px 14px; border-radius: 18px; }
+      .btn-circle { width: 42px; height: 42px; font-size: 1.1rem; }
+      .speech-bubble { top: 75px; width: 92%; padding: 10px 16px; }
+      .action-btn { padding: 8px 14px; font-size: 0.9rem; }
+      .dino-pill { padding: 6px 10px; font-size: 0.85rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 3D Canvas Canvas Container -->
+  <div id="webgl-container"></div>
+
+  <!-- UI Controls Overlay -->
+  <div class="ui-layer">
+    <!-- Top Header Bar -->
+    <div class="header-bar">
+      <div class="brand-card interactive">
+        <div class="brand-icon">🦖</div>
+        <div class="brand-titles">
+          <h1>DinoLand Naya</h1>
+          <p>Petualangan Dinosaurus 3D ✨</p>
+        </div>
+      </div>
+
+      <div class="top-controls interactive">
+        <button class="btn-circle" id="btn-sound" title="Musik & Suara">🎵</button>
+        <button class="btn-circle" id="btn-night" title="Siang / Malam">☀️</button>
+        <button class="btn-circle" id="btn-reset" title="Reset Kamera">🎯</button>
+      </div>
+    </div>
+
+    <!-- Dinosaur Info Card / Speech Bubble -->
+    <div class="speech-bubble interactive" id="speech-bubble">
+      <h3 id="dino-title">🦖 Rexy Si T-Rex</h3>
+      <p id="dino-fact">Halo Naya! Aku Rexy, raja dinosaurus yang suka bermain dan melompat gembira!</p>
+    </div>
+
+    <!-- Center Interaction Hint -->
+    <div class="tap-hint" id="tap-hint">
+      <span>👆</span> Sentuh dinosaurus di dunia 3D untuk menyapa!
+    </div>
+
+    <!-- Bottom Controls & Navigation -->
+    <div class="bottom-bar">
+      <!-- Fun Action Buttons -->
+      <div class="action-row interactive">
+        <button class="action-btn roar" id="btn-roar">
+          <span>🔊</span> Aummm!
+        </button>
+        <button class="action-btn feed" id="btn-feed">
+          <span>🍉</span> Beri Makan
+        </button>
+        <button class="action-btn disco" id="btn-disco">
+          <span>🪩</span> Pesta Disko!
+        </button>
+        <button class="action-btn camera" id="btn-snap">
+          <span>📸</span> Foto
+        </button>
+      </div>
+
+      <!-- Dinosaur Selector -->
+      <div class="dino-selector interactive">
+        <button class="dino-pill active" data-dino="trex">🦖 T-Rex (Rexy)</button>
+        <button class="dino-pill" data-dino="brachio">🦕 Brachio (Longi)</button>
+        <button class="dino-pill" data-dino="tricera">🦏 Triceratops (Trike)</button>
+        <button class="dino-pill" data-dino="stego">🦎 Stego (Spiky)</button>
+        <button class="dino-pill" data-dino="ptero">🦅 Pterodactyl (Pteri)</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ==========================================================================
+       SYNTHESIZED WEB AUDIO API SOUND SYSTEM (100% Offline & Reliable)
+       ========================================================================== */
+    class DinoAudio {
+      constructor() {
+        this.ctx = null;
+        this.enabled = false;
+        this.musicPlaying = false;
+        this.musicTimer = null;
+        this.discoStep = 0;
+      }
+
+      init() {
+        if (!this.ctx) {
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          this.ctx = new AudioContext();
+        }
+        if (this.ctx.state === 'suspended') {
+          this.ctx.resume();
+        }
+      }
+
+      toggleAudio() {
+        this.init();
+        this.enabled = !this.enabled;
+        const btn = document.getElementById('btn-sound');
+        if (this.enabled) {
+          btn.innerHTML = '🔊';
+          this.startBgm();
+          this.playCuteChirp();
+        } else {
+          btn.innerHTML = '🔇';
+          this.stopBgm();
+        }
+        return this.enabled;
+      }
+
+      // Cheerful procedural nursery background melody
+      startBgm() {
+        if (!this.enabled || this.musicPlaying) return;
+        this.musicPlaying = true;
+        
+        // Pentatonic happy scale notes (Hz): C4, D4, E4, G4, A4, C5
+        const melody = [
+          261.63, 329.63, 392.00, 523.25, 392.00, 329.63,
+          293.66, 392.00, 440.00, 523.25, 440.00, 392.00,
+          329.63, 392.00, 523.25, 659.25, 523.25, 392.00,
+          261.63, 329.63, 392.00, 261.63
+        ];
+        let noteIdx = 0;
+
+        const playNext = () => {
+          if (!this.musicPlaying || !this.enabled) return;
+          const freq = melody[noteIdx % melody.length];
+          this.playTone(freq, 0.28, 'triangle', 0.04);
+          
+          // Soft playful bass
+          if (noteIdx % 2 === 0) {
+            this.playTone(freq / 2, 0.4, 'sine', 0.05);
+          }
+          noteIdx++;
+          this.musicTimer = setTimeout(playNext, 380);
+        };
+        playNext();
+      }
+
+      stopBgm() {
+        this.musicPlaying = false;
+        if (this.musicTimer) clearTimeout(this.musicTimer);
+      }
+
+      playTone(freq, duration, type = 'sine', volume = 0.1) {
+        if (!this.ctx || !this.enabled) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = type;
+          osc.frequency.setValueAtTime(freq, this.ctx.currentTime);
+          
+          gain.gain.setValueAtTime(volume, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.0001, this.ctx.currentTime + duration);
+          
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + duration);
+        } catch (e) {}
+      }
+
+      // Friendly dinosaur roar sound with pitch dive
+      playRoar() {
+        if (!this.ctx || !this.enabled) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const mod = this.ctx.createOscillator();
+          const modGain = this.ctx.createGain();
+          const gain = this.ctx.createGain();
+          const filter = this.ctx.createBiquadFilter();
+
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(140, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(45, this.ctx.currentTime + 1.2);
+
+          // FM growl modulation
+          mod.type = 'square';
+          mod.frequency.setValueAtTime(35, this.ctx.currentTime);
+          modGain.gain.setValueAtTime(60, this.ctx.currentTime);
+
+          filter.type = 'lowpass';
+          filter.frequency.setValueAtTime(600, this.ctx.currentTime);
+          filter.frequency.linearRampToValueAtTime(150, this.ctx.currentTime + 1.2);
+
+          gain.gain.setValueAtTime(0.25, this.ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.001, this.ctx.currentTime + 1.2);
+
+          mod.connect(modGain);
+          modGain.connect(osc.frequency);
+          osc.connect(filter);
+          filter.connect(gain);
+          gain.connect(this.ctx.destination);
+
+          mod.start();
+          osc.start();
+          mod.stop(this.ctx.currentTime + 1.2);
+          osc.stop(this.ctx.currentTime + 1.2);
+        } catch (e) {}
+      }
+
+      // Boing jump sound
+      playBoing() {
+        if (!this.ctx || !this.enabled) return;
+        try {
+          const osc = this.ctx.createOscillator();
+          const gain = this.ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(180, this.ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(600, this.ctx.currentTime + 0.35);
+
+          gain.gain.setValueAtTime(0.2, this.ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, this.ctx.currentTime + 0.35);
+
+          osc.connect(gain);
+          gain.connect(this.ctx.destination);
+          osc.start();
+          osc.stop(this.ctx.currentTime + 0.35);
+        } catch (e) {}
+      }
+
+      // Munch eating sound
+      playMunch() {
+        if (!this.ctx || !this.enabled) return;
+        this.playTone(450, 0.08, 'triangle', 0.15);
+        setTimeout(() => this.playTone(320, 0.12, 'square', 0.12), 90);
+        setTimeout(() => this.playTone(550, 0.15, 'sine', 0.18), 180);
+      }
+
+      // Cheerful chirp
+      playCuteChirp() {
+        if (!this.ctx || !this.enabled) return;
+        this.playTone(750, 0.1, 'sine', 0.15);
+        setTimeout(() => this.playTone(1100, 0.15, 'sine', 0.15), 100);
+      }
+    }
+
+    const soundSystem = new DinoAudio();
+
+    /* ==========================================================================
+       DINO FACTS & PERSONALITY DATA (Special for Naya)
+       ========================================================================== */
+    const DINO_DATA = {
+      trex: {
+        name: "🦖 Rexy Si T-Rex",
+        color: "#7BC043",
+        fact: "Halo Naya! Aku Rexy! Meskipun raja dinosaurus, aku suka melompat gembira, main bola, dan makan semangka manis! 🍉",
+        cameraPos: { x: 0, y: 5, z: 12 },
+        targetPos: { x: 0, y: 2, z: 0 }
+      },
+      brachio: {
+        name: "🦕 Longi Si Brachiosaurus",
+        color: "#34E0A1",
+        fact: "Hai Naya! Leherku tinggii sekali sampai bisa menyapa awan dan memetik daun paling hijau di pucuk pohon! 🌿",
+        cameraPos: { x: 12, y: 10, z: 16 },
+        targetPos: { x: 9, y: 5, z: -3 }
+      },
+      tricera: {
+        name: "🦏 Trike Si Triceratops",
+        color: "#FF7675",
+        fact: "Halo Naya! Aku punya 3 tanduk keren dan tameng kepala warna-warni! Aku dinosaurus pemberani penjaga DinoLand! 🛡️",
+        cameraPos: { x: -11, y: 5, z: 12 },
+        targetPos: { x: -8, y: 2, z: 1 }
+      },
+      stego: {
+        name: "🦎 Spiky Si Stegosaurus",
+        color: "#FDCB6E",
+        fact: "Hai Naya! Lempeng duri di punggungku bisa menyala warna jingga kalau aku sedang senang bermain! ✨",
+        cameraPos: { x: 10, y: 5, z: 6 },
+        targetPos: { x: 7, y: 1.8, z: 5 }
+      },
+      ptero: {
+        name: "🦅 Pteri Si Pterodactyl",
+        color: "#A29BFE",
+        fact: "Ciiit! Naya, lihat aku terbang bebas mengitari gunung berapi di langit DinoLand yang indah! 🌋⛅",
+        cameraPos: { x: 0, y: 16, z: 24 },
+        targetPos: { x: 0, y: 10, z: 0 }
+      }
+    };
+
+    /* ==========================================================================
+       THREE.JS 3D SCENE SETUP
+       ========================================================================== */
+    const container = document.getElementById('webgl-container');
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x7bdff2);
+    scene.fog = new THREE.FogExp2(0x7bdff2, 0.012);
+
+    const camera = new THREE.PerspectiveCamera(48, window.innerWidth / window.innerHeight, 0.1, 1000);
+    camera.position.set(0, 10, 22);
+
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.toneMapping = THREE.ACESFilmicToneMapping;
+    renderer.toneMappingExposure = 1.1;
+    container.appendChild(renderer.domElement);
+
+    const controls = new THREE.OrbitControls(camera, renderer.domElement);
+    controls.enableDamping = true;
+    controls.dampingFactor = 0.06;
+    controls.maxPolarAngle = Math.PI / 2 - 0.02;
+    controls.minDistance = 6;
+    controls.maxDistance = 45;
+    controls.target.set(0, 2.5, 0);
+
+    /* ==========================================================================
+       LIGHTING & ATMOSPHERE
+       ========================================================================== */
+    const hemiLight = new THREE.HemisphereLight(0xffffff, 0x55aa66, 0.75);
+    scene.add(hemiLight);
+
+    const dirLight = new THREE.DirectionalLight(0xfff4d6, 1.2);
+    dirLight.position.set(20, 35, 18);
+    dirLight.castShadow = true;
+    dirLight.shadow.mapSize.width = 2048;
+    dirLight.shadow.mapSize.height = 2048;
+    dirLight.shadow.camera.near = 0.5;
+    dirLight.shadow.camera.far = 100;
+    const d = 26;
+    dirLight.shadow.camera.left = -d;
+    dirLight.shadow.camera.right = d;
+    dirLight.shadow.camera.top = d;
+    dirLight.shadow.camera.bottom = -d;
+    dirLight.shadow.bias = -0.0005;
+    scene.add(dirLight);
+
+    // Warm volcano point light
+    const volcanoLight = new THREE.PointLight(0xff4500, 2.5, 25);
+    volcanoLight.position.set(-15, 12, -18);
+    scene.add(volcanoLight);
+
+    // Disco light (for disco mode)
+    const discoLight = new THREE.PointLight(0xff00ff, 0, 30);
+    discoLight.position.set(0, 10, 0);
+    scene.add(discoLight);
+
+    /* ==========================================================================
+       MATERIAL PALETTE (Warm, Soft, Toy-like Plastic/Stylized)
+       ========================================================================== */
+    const mats = {
+      ground: new THREE.MeshLambertMaterial({ color: 0x76b852 }),
+      groundDark: new THREE.MeshLambertMaterial({ color: 0x5a9e38 }),
+      water: new THREE.MeshPhongMaterial({ color: 0x38b6ff, shininess: 80, transparent: true, opacity: 0.85 }),
+      volcano: new THREE.MeshLambertMaterial({ color: 0x483d3f, flatShading: true }),
+      lava: new THREE.MeshBasicMaterial({ color: 0xff4713 }),
+      cloud: new THREE.MeshLambertMaterial({ color: 0xffffff, flatShading: true }),
+      wood: new THREE.MeshLambertMaterial({ color: 0x8b5a2b, flatShading: true }),
+      leaves: new THREE.MeshLambertMaterial({ color: 0x27ae60, flatShading: true }),
+      mushroomCap: new THREE.MeshLambertMaterial({ color: 0xe74c3c, flatShading: true }),
+      mushroomDots: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      stone: new THREE.MeshLambertMaterial({ color: 0x95a5a6, flatShading: true }),
+      eyeWhite: new THREE.MeshBasicMaterial({ color: 0xffffff }),
+      eyePupil: new THREE.MeshBasicMaterial({ color: 0x111111 }),
+      // Dinosaurs
+      trexGreen: new THREE.MeshLambertMaterial({ color: 0x7BC043, flatShading: true }),
+      trexBelly: new THREE.MeshLambertMaterial({ color: 0xFDF498, flatShading: true }),
+      brachioTeal: new THREE.MeshLambertMaterial({ color: 0x34E0A1, flatShading: true }),
+      brachioBelly: new THREE.MeshLambertMaterial({ color: 0xC7FCE6, flatShading: true }),
+      triceraCoral: new THREE.MeshLambertMaterial({ color: 0xFF7675, flatShading: true }),
+      triceraHorn: new THREE.MeshLambertMaterial({ color: 0xFFF275, flatShading: true }),
+      stegoYellow: new THREE.MeshLambertMaterial({ color: 0xFDCB6E, flatShading: true }),
+      stegoPlates: new THREE.MeshLambertMaterial({ color: 0xE17055, flatShading: true }),
+      pteroPurple: new THREE.MeshLambertMaterial({ color: 0xA29BFE, flatShading: true }),
+      pteroWing: new THREE.MeshLambertMaterial({ color: 0xD6A2E8, flatShading: true, side: THREE.DoubleSide })
+    };
+
+    /* ==========================================================================
+       ENVIRONMENT BUILDER: TERRAIN, VOLCANO, TREES, CLOUDS
+       ========================================================================== */
+    const envGroup = new THREE.Group();
+    scene.add(envGroup);
+
+    // 1. Island / Ground Base (Hexagonal stylized land)
+    const islandGeo = new THREE.CylinderGeometry(28, 30, 4, 32);
+    const island = new THREE.Mesh(islandGeo, mats.ground);
+    island.position.y = -2;
+    island.receiveShadow = true;
+    envGroup.add(island);
+
+    // Lower earthen cliff
+    const cliffGeo = new THREE.CylinderGeometry(29.8, 24, 7, 32);
+    const cliff = new THREE.Mesh(cliffGeo, new THREE.MeshLambertMaterial({ color: 0x8a5d3b, flatShading: true }));
+    cliff.position.y = -6.5;
+    envGroup.add(cliff);
+
+    // Cute Small Lake
+    const lakeGeo = new THREE.CylinderGeometry(6, 6, 0.2, 24);
+    const lake = new THREE.Mesh(lakeGeo, mats.water);
+    lake.position.set(-8, 0.08, -5);
+    lake.receiveShadow = true;
+    envGroup.add(lake);
+
+    // 2. Volcano with glowing lava crater
+    const volcanoGroup = new THREE.Group();
+    volcanoGroup.position.set(-15, 0, -18);
+
+    const volcanoCone = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.5, 9, 13, 10),
+      mats.volcano
+    );
+    volcanoCone.position.y = 6.5;
+    volcanoCone.castShadow = true;
+    volcanoCone.receiveShadow = true;
+    volcanoGroup.add(volcanoCone);
+
+    const lavaCrater = new THREE.Mesh(
+      new THREE.CylinderGeometry(2.3, 2.3, 0.3, 10),
+      mats.lava
+    );
+    lavaCrater.position.y = 12.9;
+    volcanoGroup.add(lavaCrater);
+    envGroup.add(volcanoGroup);
+
+    // Smoke / Spark Particles from Volcano
+    const smokePuffs = [];
+    for (let i = 0; i < 18; i++) {
+      const puff = new THREE.Mesh(
+        new THREE.DodecahedronGeometry(0.5 + Math.random() * 0.4),
+        new THREE.MeshLambertMaterial({ color: Math.random() > 0.4 ? 0xdddddd : 0xff7733, transparent: true, opacity: 0.65, flatShading: true })
+      );
+      puff.userData = {
+        baseX: -15,
+        baseZ: -18,
+        speedY: 0.03 + Math.random() * 0.04,
+        driftX: (Math.random() - 0.5) * 0.02,
+        phase: Math.random() * Math.PI * 2
+      };
+      puff.position.set(-15 + (Math.random() - 0.5) * 1.5, 13 + Math.random() * 8, -18 + (Math.random() - 0.5) * 1.5);
+      envGroup.add(puff);
+      smokePuffs.push(puff);
+    }
+
+    // 3. Prehistoric Palm Trees Helper
+    function createPalmTree(x, z, scale = 1) {
+      const tree = new THREE.Group();
+      tree.position.set(x, 0, z);
+      tree.scale.set(scale, scale, scale);
+
+      // Curved segmented trunk
+      let prevY = 0;
+      for (let i = 0; i < 5; i++) {
+        const seg = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.35 - i * 0.04, 0.45 - i * 0.04, 0.9, 6),
+          mats.wood
+        );
+        seg.position.set(Math.sin(i * 0.25) * 0.3, prevY + 0.45, 0);
+        seg.rotation.z = -i * 0.08;
+        seg.castShadow = true;
+        tree.add(seg);
+        prevY += 0.8;
+      }
+
+      // Leaves canopy
+      const crown = new THREE.Group();
+      crown.position.set(Math.sin(4 * 0.25) * 0.3, prevY, 0);
+      for (let j = 0; j < 6; j++) {
+        const angle = (j / 6) * Math.PI * 2;
+        const leaf = new THREE.Mesh(
+          new THREE.ConeGeometry(0.8, 2.5, 4),
+          mats.leaves
+        );
+        leaf.rotation.x = Math.PI / 2.6;
+        leaf.rotation.z = angle;
+        leaf.position.set(Math.cos(angle) * 0.8, -0.3, Math.sin(angle) * 0.8);
+        leaf.castShadow = true;
+        crown.add(leaf);
+      }
+      tree.add(crown);
+      return tree;
+    }
+
+    const treePositions = [
+      [14, -8, 1.3], [17, -5, 1.1], [15, 2, 0.9],
+      [-5, -12, 1.2], [-8, -14, 1], [-18, 5, 1.4],
+      [-15, 12, 1.1], [6, 15, 1.2], [10, 14, 0.95],
+      [-12, -2, 0.8], [4, -14, 1.1]
+    ];
+    treePositions.forEach(([x, z, s]) => envGroup.add(createPalmTree(x, z, s)));
+
+    // 4. Giant Prehistoric Mushrooms
+    function createMushroom(x, z, scale = 1) {
+      const shroom = new THREE.Group();
+      shroom.position.set(x, 0, z);
+      shroom.scale.set(scale, scale, scale);
+
+      const stem = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.2, 0.3, 1.2, 8),
+        new THREE.MeshLambertMaterial({ color: 0xffffff })
+      );
+      stem.position.y = 0.6;
+      stem.castShadow = true;
+      shroom.add(stem);
+
+      const cap = new THREE.Mesh(
+        new THREE.SphereGeometry(0.8, 8, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+        mats.mushroomCap
+      );
+      cap.position.y = 1.2;
+      cap.castShadow = true;
+      shroom.add(cap);
+
+      // White spots
+      for (let k = 0; k < 5; k++) {
+        const spot = new THREE.Mesh(new THREE.DodecahedronGeometry(0.12), mats.mushroomDots);
+        const a = (k / 5) * Math.PI * 2;
+        spot.position.set(Math.cos(a) * 0.5, 1.5, Math.sin(a) * 0.5);
+        shroom.add(spot);
+      }
+      return shroom;
+    }
+
+    [[-3, 4, 1.2], [-4, 5, 0.9], [4, 6, 1.1], [3, 8, 0.8], [-10, 8, 1.4]].forEach(([x, z, s]) => {
+      envGroup.add(createMushroom(x, z, s));
+    });
+
+    // 5. Stylized Fluffy Clouds
+    const clouds = [];
+    for (let c = 0; c < 8; c++) {
+      const cloudGroup = new THREE.Group();
+      const numBlobs = 3 + Math.floor(Math.random() * 3);
+      for (let b = 0; b < numBlobs; b++) {
+        const blob = new THREE.Mesh(
+          new THREE.DodecahedronGeometry(1.6 + Math.random() * 1.2),
+          mats.cloud
+        );
+        blob.position.set(b * 1.4, Math.random() * 0.6, (Math.random() - 0.5) * 0.8);
+        cloudGroup.add(blob);
+      }
+      cloudGroup.position.set(
+        (Math.random() - 0.5) * 60,
+        18 + Math.random() * 8,
+        (Math.random() - 0.5) * 60
+      );
+      cloudGroup.userData = { speed: 0.015 + Math.random() * 0.02 };
+      envGroup.add(cloudGroup);
+      clouds.push(cloudGroup);
+    }
+
+    /* ==========================================================================
+       PROCEDURAL 3D DINOSAUR BUILDERS
+       ========================================================================== */
+    const dinos = {};
+    const interactiveObjects = [];
+
+    // HELPER: Cartoon Eye with pupil and sparkle highlight
+    function makeEye() {
+      const eye = new THREE.Group();
+      const white = new THREE.Mesh(new THREE.SphereGeometry(0.28, 10, 10), mats.eyeWhite);
+      eye.add(white);
+      const pupil = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), mats.eyePupil);
+      pupil.position.z = 0.2;
+      eye.add(pupil);
+      const highlight = new THREE.Mesh(new THREE.SphereGeometry(0.06, 6, 6), mats.eyeWhite);
+      highlight.position.set(0.07, 0.07, 0.28);
+      eye.add(highlight);
+      return eye;
+    }
+
+    // 1. REXY (T-Rex)
+    function buildTrex() {
+      const rex = new THREE.Group();
+      rex.name = 'trex';
+
+      // Torso / Body
+      const body = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.2, 2.6), mats.trexGreen);
+      body.position.y = 2.4;
+      body.castShadow = true;
+      body.receiveShadow = true;
+      rex.add(body);
+
+      // Yellow belly patch
+      const belly = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.8, 1.4), mats.trexBelly);
+      belly.position.set(0, 2.2, 0.8);
+      rex.add(belly);
+
+      // Neck & Head with opening jaw
+      const neck = new THREE.Mesh(new THREE.BoxGeometry(1.2, 1.2, 1.2), mats.trexGreen);
+      neck.position.set(0, 3.4, 0.8);
+      neck.castShadow = true;
+      rex.add(neck);
+
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 4.2, 1.4);
+
+      const headTop = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.3, 2.2), mats.trexGreen);
+      headTop.castShadow = true;
+      headGroup.add(headTop);
+
+      // Cartoon big snout
+      const snout = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.8, 1.4), mats.trexGreen);
+      snout.position.set(0, -0.1, 1.3);
+      snout.castShadow = true;
+      headGroup.add(snout);
+
+      // Lower Jaw (animated when roaring!)
+      const jaw = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.45, 1.8), mats.trexBelly);
+      jaw.position.set(0, -0.65, 0.6);
+      jaw.castShadow = true;
+      headGroup.add(jaw);
+
+      // Cute Eyes
+      const leftEye = makeEye();
+      leftEye.position.set(0.8, 0.4, 0.4);
+      leftEye.rotation.y = Math.PI / 2;
+      headGroup.add(leftEye);
+
+      const rightEye = makeEye();
+      rightEye.position.set(-0.8, 0.4, 0.4);
+      rightEye.rotation.y = -Math.PI / 2;
+      headGroup.add(rightEye);
+
+      rex.add(headGroup);
+
+      // Tiny Cute T-Rex Arms
+      const leftArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.9), mats.trexGreen);
+      leftArm.position.set(0.95, 2.4, 1.2);
+      leftArm.rotation.x = -Math.PI / 5;
+      rex.add(leftArm);
+
+      const rightArm = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.35, 0.9), mats.trexGreen);
+      rightArm.position.set(-0.95, 2.4, 1.2);
+      rightArm.rotation.x = -Math.PI / 5;
+      rex.add(rightArm);
+
+      // Chunky Legs & Feet
+      const legGeo = new THREE.BoxGeometry(0.65, 1.5, 0.8);
+      const footGeo = new THREE.BoxGeometry(0.85, 0.4, 1.3);
+
+      const leftLegGroup = new THREE.Group();
+      leftLegGroup.position.set(1.1, 1.5, -0.2);
+      const leftLeg = new THREE.Mesh(legGeo, mats.trexGreen);
+      leftLeg.castShadow = true;
+      const leftFoot = new THREE.Mesh(footGeo, mats.trexGreen);
+      leftFoot.position.set(0, -0.7, 0.3);
+      leftFoot.castShadow = true;
+      leftLegGroup.add(leftLeg, leftFoot);
+      rex.add(leftLegGroup);
+
+      const rightLegGroup = new THREE.Group();
+      rightLegGroup.position.set(-1.1, 1.5, -0.2);
+      const rightLeg = new THREE.Mesh(legGeo, mats.trexGreen);
+      rightLeg.castShadow = true;
+      const rightFoot = new THREE.Mesh(footGeo, mats.trexGreen);
+      rightFoot.position.set(0, -0.7, 0.3);
+      rightFoot.castShadow = true;
+      rightLegGroup.add(rightLeg, rightFoot);
+      rex.add(rightLegGroup);
+
+      // Tail
+      const tailGroup = new THREE.Group();
+      tailGroup.position.set(0, 2.2, -1.3);
+      const tailSeg1 = new THREE.Mesh(new THREE.ConeGeometry(0.7, 2.2, 6), mats.trexGreen);
+      tailSeg1.rotation.x = -Math.PI / 2.3;
+      tailSeg1.position.z = -1;
+      tailSeg1.castShadow = true;
+      tailGroup.add(tailSeg1);
+      rex.add(tailGroup);
+
+      rex.userData = {
+        name: 'trex',
+        jaw: jaw,
+        headGroup: headGroup,
+        tailGroup: tailGroup,
+        leftArm: leftArm,
+        rightArm: rightArm,
+        baseY: 0
+      };
+
+      rex.position.set(0, 0, 0);
+      return rex;
+    }
+
+    // 2. LONGI (Brachiosaurus)
+    function buildBrachio() {
+      const brachio = new THREE.Group();
+      brachio.name = 'brachio';
+
+      // Giant rounded body
+      const body = new THREE.Mesh(new THREE.DodecahedronGeometry(2.4), mats.brachioTeal);
+      body.position.set(0, 3.8, 0);
+      body.castShadow = true;
+      brachio.add(body);
+
+      // Long Segmented Neck
+      const neckGroup = new THREE.Group();
+      neckGroup.position.set(0, 4.5, 1.5);
+      for (let i = 0; i < 7; i++) {
+        const seg = new THREE.Mesh(
+          new THREE.CylinderGeometry(0.7 - i * 0.05, 0.85 - i * 0.05, 1.1, 8),
+          mats.brachioTeal
+        );
+        seg.position.set(0, i * 0.9, i * 0.25);
+        seg.rotation.x = 0.22;
+        seg.castShadow = true;
+        neckGroup.add(seg);
+      }
+
+      // Cute Little Head
+      const head = new THREE.Group();
+      head.position.set(0, 6.7, 2.2);
+      const headMesh = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.9, 1.5), mats.brachioTeal);
+      headMesh.castShadow = true;
+      head.add(headMesh);
+
+      // Crest
+      const crest = new THREE.Mesh(new THREE.ConeGeometry(0.35, 0.6, 5), mats.brachioBelly);
+      crest.position.set(0, 0.6, 0);
+      head.add(crest);
+
+      // Eyes
+      const leftEye = makeEye();
+      leftEye.position.set(0.6, 0.2, 0.2);
+      leftEye.rotation.y = Math.PI / 2;
+      head.add(leftEye);
+
+      const rightEye = makeEye();
+      rightEye.position.set(-0.6, 0.2, 0.2);
+      rightEye.rotation.y = -Math.PI / 2;
+      head.add(rightEye);
+
+      neckGroup.add(head);
+      brachio.add(neckGroup);
+
+      // 4 Pillar Legs
+      const legPositions = [
+        [1.3, 1.8, 1.2], [-1.3, 1.8, 1.2],
+        [1.2, 1.6, -1.3], [-1.2, 1.6, -1.3]
+      ];
+      legPositions.forEach(([lx, ly, lz]) => {
+        const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.55, 0.65, 3.6, 8), mats.brachioTeal);
+        leg.position.set(lx, ly, lz);
+        leg.castShadow = true;
+        brachio.add(leg);
+      });
+
+      // Tail
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.65, 3.5, 6), mats.brachioTeal);
+      tail.position.set(0, 3.2, -2.6);
+      tail.rotation.x = -Math.PI / 2.6;
+      tail.castShadow = true;
+      brachio.add(tail);
+
+      brachio.userData = {
+        name: 'brachio',
+        neckGroup: neckGroup,
+        head: head,
+        tail: tail,
+        baseY: 0
+      };
+
+      brachio.position.set(9, 0, -3);
+      brachio.rotation.y = -Math.PI / 4;
+      return brachio;
+    }
+
+    // 3. TRIKE (Triceratops)
+    function buildTricera() {
+      const trike = new THREE.Group();
+      trike.name = 'tricera';
+
+      // Heavy stout body
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.4, 1.9, 3.2), mats.triceraCoral);
+      body.position.y = 2.1;
+      body.castShadow = true;
+      trike.add(body);
+
+      // Head & Frill Shield
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 2.5, 1.8);
+
+      const headBase = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.4, 1.6), mats.triceraCoral);
+      headBase.castShadow = true;
+      headGroup.add(headBase);
+
+      // Giant Frill Neck Shield
+      const frill = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 1.6, 0.35, 12), mats.triceraCoral);
+      frill.rotation.x = Math.PI / 3;
+      frill.position.set(0, 0.8, -0.4);
+      frill.castShadow = true;
+      headGroup.add(frill);
+
+      // 2 Big Brow Horns
+      const hornGeo = new THREE.ConeGeometry(0.25, 1.3, 6);
+      const leftHorn = new THREE.Mesh(hornGeo, mats.triceraHorn);
+      leftHorn.position.set(0.6, 0.9, 0.6);
+      leftHorn.rotation.x = Math.PI / 3;
+      headGroup.add(leftHorn);
+
+      const rightHorn = new THREE.Mesh(hornGeo, mats.triceraHorn);
+      rightHorn.position.set(-0.6, 0.9, 0.6);
+      rightHorn.rotation.x = Math.PI / 3;
+      headGroup.add(rightHorn);
+
+      // 1 Nose Horn
+      const noseHorn = new THREE.Mesh(new THREE.ConeGeometry(0.2, 0.7, 6), mats.triceraHorn);
+      noseHorn.position.set(0, 0.2, 1.2);
+      noseHorn.rotation.x = Math.PI / 3.5;
+      headGroup.add(noseHorn);
+
+      // Cute Eyes
+      const leftEye = makeEye();
+      leftEye.position.set(0.85, 0.2, 0.2);
+      leftEye.rotation.y = Math.PI / 2;
+      headGroup.add(leftEye);
+
+      const rightEye = makeEye();
+      rightEye.position.set(-0.85, 0.2, 0.2);
+      rightEye.rotation.y = -Math.PI / 2;
+      headGroup.add(rightEye);
+
+      trike.add(headGroup);
+
+      // 4 Chunky Stomping Legs
+      const legGeo = new THREE.CylinderGeometry(0.5, 0.6, 1.7, 8);
+      [
+        [1.1, 0.85, 1.1], [-1.1, 0.85, 1.1],
+        [1.1, 0.85, -1.1], [-1.1, 0.85, -1.1]
+      ].forEach(([lx, ly, lz]) => {
+        const leg = new THREE.Mesh(legGeo, mats.triceraCoral);
+        leg.position.set(lx, ly, lz);
+        leg.castShadow = true;
+        trike.add(leg);
+      });
+
+      // Tail
+      const tail = new THREE.Mesh(new THREE.ConeGeometry(0.5, 2.2, 6), mats.triceraCoral);
+      tail.position.set(0, 1.8, -1.8);
+      tail.rotation.x = -Math.PI / 2.4;
+      tail.castShadow = true;
+      trike.add(tail);
+
+      trike.userData = {
+        name: 'tricera',
+        headGroup: headGroup,
+        tail: tail,
+        baseY: 0
+      };
+
+      trike.position.set(-8, 0, 1);
+      trike.rotation.y = Math.PI / 3;
+      return trike;
+    }
+
+    // 4. SPIKY (Stegosaurus)
+    function buildStego() {
+      const stego = new THREE.Group();
+      stego.name = 'stego';
+
+      // Arched body
+      const body = new THREE.Mesh(new THREE.BoxGeometry(2.0, 1.8, 3.2), mats.stegoYellow);
+      body.position.y = 1.9;
+      body.castShadow = true;
+      stego.add(body);
+
+      // Dual Row Stego Plates
+      for (let p = 0; p < 5; p++) {
+        const plateGeo = new THREE.ConeGeometry(0.45 + (p === 2 ? 0.2 : 0), 1.1, 4);
+        plateGeo.scale(1, 1, 0.25);
+
+        const leftPlate = new THREE.Mesh(plateGeo, mats.stegoPlates);
+        leftPlate.position.set(0.4, 2.8 + (p === 2 ? 0.2 : 0), -1.2 + p * 0.7);
+        leftPlate.castShadow = true;
+        stego.add(leftPlate);
+
+        const rightPlate = new THREE.Mesh(plateGeo, mats.stegoPlates);
+        rightPlate.position.set(-0.4, 2.9 + (p === 2 ? 0.2 : 0), -0.9 + p * 0.7);
+        rightPlate.castShadow = true;
+        stego.add(rightPlate);
+      }
+
+      // Small Head low to ground
+      const head = new THREE.Group();
+      head.position.set(0, 1.3, 2.2);
+      const headMesh = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.8, 1.3), mats.stegoYellow);
+      headMesh.castShadow = true;
+      head.add(headMesh);
+
+      const leftEye = makeEye();
+      leftEye.position.set(0.48, 0.15, 0.2);
+      leftEye.rotation.y = Math.PI / 2;
+      head.add(leftEye);
+
+      const rightEye = makeEye();
+      rightEye.position.set(-0.48, 0.15, 0.2);
+      rightEye.rotation.y = -Math.PI / 2;
+      head.add(rightEye);
+
+      stego.add(head);
+
+      // 4 Legs
+      const legGeo = new THREE.CylinderGeometry(0.45, 0.55, 1.6, 8);
+      [
+        [0.9, 0.8, 1.0], [-0.9, 0.8, 1.0],
+        [1.0, 0.8, -1.0], [-1.0, 0.8, -1.0]
+      ].forEach(([lx, ly, lz]) => {
+        const leg = new THREE.Mesh(legGeo, mats.stegoYellow);
+        leg.position.set(lx, ly, lz);
+        leg.castShadow = true;
+        stego.add(leg);
+      });
+
+      // Tail with 4 sharp spikes (thagomizer)
+      const tailGroup = new THREE.Group();
+      tailGroup.position.set(0, 1.7, -1.8);
+      const tailMesh = new THREE.Mesh(new THREE.ConeGeometry(0.45, 2.4, 6), mats.stegoYellow);
+      tailMesh.rotation.x = -Math.PI / 2.3;
+      tailMesh.castShadow = true;
+      tailGroup.add(tailMesh);
+
+      // Spikes
+      const spikeGeo = new THREE.ConeGeometry(0.12, 0.8, 4);
+      [-0.4, 0.4].forEach(sx => {
+        const s1 = new THREE.Mesh(spikeGeo, mats.triceraHorn);
+        s1.position.set(sx, 0.2, -1.8);
+        s1.rotation.z = (sx > 0 ? 1 : -1) * Math.PI / 3;
+        tailGroup.add(s1);
+      });
+      stego.add(tailGroup);
+
+      stego.userData = {
+        name: 'stego',
+        head: head,
+        tailGroup: tailGroup,
+        baseY: 0
+      };
+
+      stego.position.set(7, 0, 5);
+      stego.rotation.y = -Math.PI / 3;
+      return stego;
+    }
+
+    // 5. PTERI (Pterodactyl - Soaring high above)
+    function buildPtero() {
+      const ptero = new THREE.Group();
+      ptero.name = 'ptero';
+
+      // Aerodynamic Body
+      const body = new THREE.Mesh(new THREE.ConeGeometry(0.6, 2.0, 6), mats.pteroPurple);
+      body.rotation.x = Math.PI / 2;
+      body.castShadow = true;
+      ptero.add(body);
+
+      // Head with long rear crest & sharp cute beak
+      const headGroup = new THREE.Group();
+      headGroup.position.set(0, 0.3, 1.1);
+
+      const beak = new THREE.Mesh(new THREE.ConeGeometry(0.35, 1.6, 5), mats.triceraHorn);
+      beak.rotation.x = Math.PI / 2;
+      headGroup.add(beak);
+
+      const crest = new THREE.Mesh(new THREE.ConeGeometry(0.28, 1.4, 5), mats.pteroPurple);
+      crest.rotation.x = -Math.PI / 2.3;
+      crest.position.set(0, 0.3, -0.6);
+      headGroup.add(crest);
+
+      ptero.add(headGroup);
+
+      // Flapping Wings
+      const leftWing = new THREE.Group();
+      leftWing.position.set(0.5, 0.1, 0.2);
+      const lWingMesh = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 1.4), mats.pteroWing);
+      lWingMesh.position.x = 1.6;
+      lWingMesh.castShadow = true;
+      leftWing.add(lWingMesh);
+      ptero.add(leftWing);
+
+      const rightWing = new THREE.Group();
+      rightWing.position.set(-0.5, 0.1, 0.2);
+      const rWingMesh = new THREE.Mesh(new THREE.BoxGeometry(3.2, 0.08, 1.4), mats.pteroWing);
+      rWingMesh.position.x = -1.6;
+      rWingMesh.castShadow = true;
+      rightWing.add(rWingMesh);
+      ptero.add(rightWing);
+
+      ptero.userData = {
+        name: 'ptero',
+        leftWing: leftWing,
+        rightWing: rightWing,
+        headGroup: headGroup,
+        orbitRadius: 18,
+        orbitAngle: 0,
+        orbitSpeed: 0.012
+      };
+
+      ptero.position.set(0, 16, 0);
+      return ptero;
+    }
+
+    // Instantiate and store dinosaurs
+    dinos.trex = buildTrex();
+    dinos.brachio = buildBrachio();
+    dinos.tricera = buildTricera();
+    dinos.stego = buildStego();
+    dinos.ptero = buildPtero();
+
+    Object.values(dinos).forEach(dino => {
+      scene.add(dino);
+      // Add child meshes to raycasting list
+      dino.traverse(child => {
+        if (child.isMesh) {
+          child.userData.parentDino = dino;
+          interactiveObjects.push(child);
+        }
+      });
+    });
+
+    let currentDinoKey = 'trex';
+
+    /* ==========================================================================
+       FEEDING ITEMS (Apples, Watermelons, Leaves Dropping with Confetti)
+       ========================================================================== */
+    const foodItems = [];
+
+    function spawnFood(dino) {
+      soundSystem.playMunch();
+
+      const foodTypes = ['apple', 'watermelon', 'leaf'];
+      const type = foodTypes[Math.floor(Math.random() * foodTypes.length)];
+      let foodMesh;
+
+      if (type === 'apple') {
+        foodMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.4, 8, 8),
+          new THREE.MeshLambertMaterial({ color: 0xff3838, flatShading: true })
+        );
+      } else if (type === 'watermelon') {
+        foodMesh = new THREE.Mesh(
+          new THREE.SphereGeometry(0.55, 8, 8),
+          new THREE.MeshLambertMaterial({ color: 0x2ed573, flatShading: true })
+        );
+      } else {
+        foodMesh = new THREE.Mesh(
+          new THREE.ConeGeometry(0.5, 1.2, 4),
+          new THREE.MeshLambertMaterial({ color: 0x20bf6b, flatShading: true })
+        );
+      }
+
+      foodMesh.position.set(
+        dino.position.x + (Math.random() - 0.5) * 1.5,
+        dino.position.y + 7 + Math.random() * 2,
+        dino.position.z + (Math.random() - 0.5) * 1.5
+      );
+      foodMesh.castShadow = true;
+      scene.add(foodMesh);
+
+      gsap.to(foodMesh.position, {
+        y: dino.position.y + 2.5,
+        duration: 0.8,
+        ease: 'bounce.out',
+        onComplete: () => {
+          // Explode tiny confetti hearts
+          triggerConfetti(0.5, 0.4);
+          gsap.to(foodMesh.scale, {
+            x: 0.01, y: 0.01, z: 0.01,
+            duration: 0.25,
+            onComplete: () => scene.remove(foodMesh)
+          });
+        }
+      });
+    }
+
+    /* ==========================================================================
+       CONFETTI BURST HELPER
+       ========================================================================== */
+    function triggerConfetti(originX = 0.5, originY = 0.5) {
+      if (typeof confetti === 'function') {
+        confetti({
+          particleCount: 45,
+          spread: 70,
+          origin: { x: originX, y: originY },
+          colors: ['#FF6B6B', '#4ECDC4', '#FFE66D', '#7BC043', '#9B5DE5']
+        });
+      }
+    }
+
+    /* ==========================================================================
+       ANIMATIONS, INTERACTION & DISCO MODE
+       ========================================================================== */
+    let isDiscoMode = false;
+    let discoInterval = null;
+
+    function playDinoAction(dinoKey) {
+      const dino = dinos[dinoKey];
+      if (!dino) return;
+
+      soundSystem.playRoar();
+      soundSystem.playBoing();
+      triggerConfetti(0.5, 0.35);
+
+      // Jump and wiggle animation
+      gsap.killTweensOf(dino.position);
+      gsap.killTweensOf(dino.rotation);
+
+      const origY = dino.userData.baseY || 0;
+      gsap.to(dino.position, {
+        y: origY + 1.8,
+        duration: 0.35,
+        yoyo: true,
+        repeat: 1,
+        ease: 'power1.out'
+      });
+
+      gsap.to(dino.rotation, {
+        y: dino.rotation.y + 0.35,
+        duration: 0.2,
+        yoyo: true,
+        repeat: 3,
+        ease: 'sine.inOut'
+      });
+
+      // Jaw / head movement
+      if (dino.userData.jaw) {
+        gsap.to(dino.userData.jaw.rotation, {
+          x: Math.PI / 4,
+          duration: 0.2,
+          yoyo: true,
+          repeat: 3
+        });
+      }
+
+      // Display speech bubble
+      showSpeechBubble(dinoKey);
+    }
+
+    function showSpeechBubble(dinoKey) {
+      const data = DINO_DATA[dinoKey];
+      const bubble = document.getElementById('speech-bubble');
+      document.getElementById('dino-title').innerHTML = data.name;
+      document.getElementById('dino-fact').innerHTML = data.fact;
+      bubble.classList.add('active');
+
+      // Auto-hide hint
+      document.getElementById('tap-hint').style.display = 'none';
+
+      clearTimeout(bubble._timer);
+      bubble._timer = setTimeout(() => {
+        bubble.classList.remove('active');
+      }, 7000);
+    }
+
+    function switchDinoFocus(dinoKey) {
+      currentDinoKey = dinoKey;
+      const data = DINO_DATA[dinoKey];
+
+      // Update pills UI
+      document.querySelectorAll('.dino-pill').forEach(btn => {
+        btn.classList.toggle('active', btn.dataset.dino === dinoKey);
+      });
+
+      // Smooth camera transition
+      gsap.to(camera.position, {
+        x: data.cameraPos.x,
+        y: data.cameraPos.y,
+        z: data.cameraPos.z,
+        duration: 1.4,
+        ease: 'power2.inOut'
+      });
+
+      gsap.to(controls.target, {
+        x: data.targetPos.x,
+        y: data.targetPos.y,
+        z: data.targetPos.z,
+        duration: 1.4,
+        ease: 'power2.inOut'
+      });
+
+      showSpeechBubble(dinoKey);
+      soundSystem.playCuteChirp();
+    }
+
+    // Toggle Disco Mode
+    function toggleDisco() {
+      isDiscoMode = !isDiscoMode;
+      const btn = document.getElementById('btn-disco');
+
+      if (isDiscoMode) {
+        btn.style.background = 'linear-gradient(135deg, #ff007f, #00f0ff)';
+        btn.innerHTML = '✨ Berhenti Disko';
+        soundSystem.playCuteChirp();
+        triggerConfetti(0.5, 0.5);
+
+        // Flash disco light colors
+        const colors = [0xff0055, 0x00ffcc, 0xffcc00, 0xaa00ff, 0x00aaff];
+        let cIdx = 0;
+        discoInterval = setInterval(() => {
+          discoLight.intensity = 3.5;
+          discoLight.color.setHex(colors[cIdx % colors.length]);
+          cIdx++;
+        }, 250);
+      } else {
+        btn.style.background = 'linear-gradient(135deg, #9b59b6, #8e44ad)';
+        btn.innerHTML = '🪩 Pesta Disko!';
+        discoLight.intensity = 0;
+        if (discoInterval) clearInterval(discoInterval);
+      }
+    }
+
+    // Toggle Day / Night Mode
+    let isNight = false;
+    function toggleDayNight() {
+      isNight = !isNight;
+      const btn = document.getElementById('btn-night');
+
+      if (isNight) {
+        btn.innerHTML = '🌙';
+        gsap.to(scene.background, { r: 0.05, g: 0.08, b: 0.22, duration: 1.5 });
+        gsap.to(scene.fog.color, { r: 0.05, g: 0.08, b: 0.22, duration: 1.5 });
+        gsap.to(dirLight, { intensity: 0.2, duration: 1.5 });
+        gsap.to(hemiLight, { intensity: 0.35, duration: 1.5 });
+        gsap.to(volcanoLight, { intensity: 5.0, duration: 1.5 });
+      } else {
+        btn.innerHTML = '☀️';
+        gsap.to(scene.background, { r: 0.48, g: 0.87, b: 0.95, duration: 1.5 });
+        gsap.to(scene.fog.color, { r: 0.48, g: 0.87, b: 0.95, duration: 1.5 });
+        gsap.to(dirLight, { intensity: 1.2, duration: 1.5 });
+        gsap.to(hemiLight, { intensity: 0.75, duration: 1.5 });
+        gsap.to(volcanoLight, { intensity: 2.5, duration: 1.5 });
+      }
+    }
+
+    // Snapshot Polaroid photo
+    function takeSnapshot() {
+      soundSystem.playCuteChirp();
+      triggerConfetti(0.5, 0.5);
+
+      renderer.render(scene, camera);
+      const dataURL = renderer.domElement.toDataURL('image/png');
+
+      const a = document.createElement('a');
+      a.download = `Petualangan-Dinosaurus-Naya-${Date.now()}.png`;
+      a.href = dataURL;
+      a.click();
+    }
+
+    /* ==========================================================================
+       RAYCASTING TAP / CLICK DETECTION
+       ========================================================================== */
+    const raycaster = new THREE.Raycaster();
+    const mouse = new THREE.Vector2();
+
+    function onPointerDown(e) {
+      // Ignore clicks on UI
+      if (e.target.closest('.interactive')) return;
+
+      const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+      const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+      if (!clientX || !clientY) return;
+
+      mouse.x = (clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(clientY / window.innerHeight) * 2 + 1;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactiveObjects, true);
+
+      if (intersects.length > 0) {
+        const hit = intersects[0];
+        let p = hit.object;
+        while (p && !p.userData.parentDino && p.parent) {
+          p = p.parent;
+        }
+        const dino = p.userData.parentDino || p;
+        if (dino && dino.name) {
+          switchDinoFocus(dino.name);
+          playDinoAction(dino.name);
+        }
+      }
+    }
+
+    window.addEventListener('pointerdown', onPointerDown);
+
+    /* ==========================================================================
+       UI EVENT LISTENERS
+       ========================================================================== */
+    document.getElementById('btn-sound').addEventListener('click', () => soundSystem.toggleAudio());
+    document.getElementById('btn-night').addEventListener('click', toggleDayNight);
+    document.getElementById('btn-reset').addEventListener('click', () => switchDinoFocus('trex'));
+    document.getElementById('btn-roar').addEventListener('click', () => playDinoAction(currentDinoKey));
+    document.getElementById('btn-feed').addEventListener('click', () => spawnFood(dinos[currentDinoKey]));
+    document.getElementById('btn-disco').addEventListener('click', toggleDisco);
+    document.getElementById('btn-snap').addEventListener('click', takeSnapshot);
+
+    document.querySelectorAll('.dino-pill').forEach(btn => {
+      btn.addEventListener('click', () => switchDinoFocus(btn.dataset.dino));
+    });
+
+    /* ==========================================================================
+       MAIN ANIMATION LOOP
+       ========================================================================== */
+    const clock = new THREE.Clock();
+
+    function animate() {
+      requestAnimationFrame(animate);
+      const t = clock.getElapsedTime();
+
+      // 1. Idle Dino Animations (breathing, tail wagging, arms)
+      const trex = dinos.trex;
+      if (trex) {
+        const breath = Math.sin(t * 2.5) * 0.05;
+        trex.position.y = (trex.userData.baseY || 0) + breath;
+        if (trex.userData.tailGroup) {
+          trex.userData.tailGroup.rotation.y = Math.sin(t * 3.5) * 0.25;
+        }
+        if (trex.userData.leftArm) {
+          trex.userData.leftArm.rotation.x = -Math.PI / 5 + Math.sin(t * 4) * 0.15;
+          trex.userData.rightArm.rotation.x = -Math.PI / 5 - Math.sin(t * 4) * 0.15;
+        }
+      }
+
+      // Brachiosaurus slow chewing & neck sway
+      const brachio = dinos.brachio;
+      if (brachio && brachio.userData.neckGroup) {
+        brachio.userData.neckGroup.rotation.z = Math.sin(t * 1.2) * 0.08;
+        brachio.userData.neckGroup.rotation.x = Math.sin(t * 1.5) * 0.06;
+      }
+
+      // Triceratops playful head bob
+      const tricera = dinos.tricera;
+      if (tricera && tricera.userData.headGroup) {
+        tricera.userData.headGroup.rotation.y = Math.sin(t * 2.0) * 0.12;
+      }
+
+      // Stegosaurus tail sway
+      const stego = dinos.stego;
+      if (stego && stego.userData.tailGroup) {
+        stego.userData.tailGroup.rotation.y = Math.sin(t * 3.0) * 0.2;
+      }
+
+      // Pterodactyl graceful circular flight path
+      const ptero = dinos.ptero;
+      if (ptero) {
+        const pData = ptero.userData;
+        pData.orbitAngle += pData.orbitSpeed;
+        ptero.position.x = Math.cos(pData.orbitAngle) * pData.orbitRadius;
+        ptero.position.z = Math.sin(pData.orbitAngle) * pData.orbitRadius;
+        ptero.position.y = 14 + Math.sin(t * 2) * 1.5;
+        ptero.rotation.y = -pData.orbitAngle - Math.PI / 2;
+
+        // Wing flapping
+        const flap = Math.sin(t * 9) * 0.45;
+        pData.leftWing.rotation.z = flap;
+        pData.rightWing.rotation.z = -flap;
+      }
+
+      // Disco dancing groove when active
+      if (isDiscoMode) {
+        Object.values(dinos).forEach((d, idx) => {
+          d.position.y = (d.userData.baseY || 0) + Math.abs(Math.sin(t * 6 + idx)) * 0.6;
+          d.rotation.y += Math.sin(t * 6 + idx) * 0.03;
+        });
+      }
+
+      // 2. Volcano smoke puffs animation
+      smokePuffs.forEach(p => {
+        p.position.y += p.userData.speedY;
+        p.position.x += p.userData.driftX;
+        p.scale.multiplyScalar(1.006);
+        if (p.position.y > 22) {
+          p.position.set(
+            p.userData.baseX + (Math.random() - 0.5) * 1.2,
+            13,
+            p.userData.baseZ + (Math.random() - 0.5) * 1.2
+          );
+          p.scale.set(1, 1, 1);
+        }
+      });
+
+      // 3. Floating clouds drift
+      clouds.forEach(c => {
+        c.position.x += c.userData.speed;
+        if (c.position.x > 35) c.position.x = -35;
+      });
+
+      controls.update();
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    /* ==========================================================================
+       WINDOW RESIZE HANDLER
+       ========================================================================== */
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+
+    // Welcome greeting
+    setTimeout(() => {
+      showSpeechBubble('trex');
+      triggerConfetti(0.5, 0.4);
+    }, 1200);
+  </script>
+</body>
+</html>
